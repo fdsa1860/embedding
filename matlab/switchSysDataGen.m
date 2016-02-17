@@ -1,6 +1,6 @@
 % switch system data generation
 
-function [data, sys_par] = switchSysDataGen(num_sys, sys_ord, num_sample)
+function [data, sys_par] = switchSysDataGen(num_sys, sys_ord, num_sample, num_dim)
 
 %% Data generation
 
@@ -9,6 +9,7 @@ if nargin == 0
     % sys_ord = [2 2 3 3 4 4]; % order for each system, minimum 2
     sys_ord = [2 2]; % order for each system, minimum 2
     num_sample = 5; % number of samples per system
+    num_dim = 1;
 end
 num_Hcol = 10;
 
@@ -25,15 +26,15 @@ for i = 1:num_sys
 end
 
 %% Generate switch system data
-data = zeros(num_sample*num_sys, 1);
-initValues = rand(sys_ord(1),1) - 0.5;
+data = zeros(num_sample*num_sys, num_dim);
+initValues = rand(sys_ord(1),num_dim) - 0.5;
 count = 1;
 for i = 1:num_sys
     for j = 1:num_sample
         if i == 1 && j <= sys_ord(1)
-            data(count) = initValues(j);
+            data(count,:) = initValues(j,:);
         else
-            data(count) = sys_par{i}(1:end-1) * data(count-sys_ord(i):count-1);
+            data(count,:) = sys_par{i}(1:end-1) * data(count-sys_ord(i):count-1,:);
         end
         count = count + 1;
     end
