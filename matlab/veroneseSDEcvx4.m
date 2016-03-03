@@ -1,12 +1,11 @@
-function [x,group] = veroneseSDEcvx4(D, k, lambda1, lambda2)
+function [x,group] = veroneseSDEcvx4(data, nn, lambda1, lambda2)
 % veronese map as constraints
 
+D = pdist2(data',data');
 D = D.^2;
 % d = size(X, 1);
-% n = size(X, 2);
-% G = X' * X;
-n = size(D, 1);
-Eta = getNNmap(D, k);
+n = size(data, 2);
+Eta = getNNmap(D, nn);
 EtaPair = (Eta'*Eta > 0);
 
 epsilon = 1e-6;
@@ -22,7 +21,9 @@ L = max(Indx);
 
 Mi = getMomInd(Dict,basis,0,Indx,0);
 
-Sh = getStructuredVeroneseMap4(Dict, d, n, 2);
+Ki = getKernelInd4(Dict, n);
+% Sh = getStructuredVeroneseMap4(Dict, d, n, 2);
+Vi = getVeroneseMap4(Dict, d, n, 2);
 
 h = size(Mi,1);
 
@@ -31,21 +32,25 @@ W2 = eye(h);
 m = zeros(L, 1);
 m_pre = ones(L, 1);
 terminate = false;
+maxIter = 100;
+iter = 1;
 while ~terminate
     m_pre = m;
     cvx_begin sdp
     cvx_solver mosek
         variables m(L, 1);
-        variables K(n, n);
         variables P(h, h) Q(h, h);
+        K = m(Ki);
         for i = 1:n
             for j = 1:n
-                ind = getCrossTermIndices3(Dict,i,j);
-                K(i,j) == m(ind);
+%                 ind = getCrossTermIndices3(Dict,i,j);
+%                 K(i,j) == m(ind);
                 if Eta(i,j)==1 || EtaPair(i,j)==1
 %                     K(i,i)+K(j,j)-2*K(i,j) == D(i,j);
-                    K(i,i)+K(j,j)-2*K(i,j) >= D(i,j)-epsilon;
-                    K(i,i)+K(j,j)-2*K(i,j) <= D(i,j)+epsilon;
+%                     K(i,i)+K(j,j)-2*K(i,j) >= D(i,j)-epsilon;
+%                     K(i,i)+K(j,j)-2*K(i,j) <= D(i,j)+epsilon;
+                    K(i,i)+K(j,j)-2*K(i,j) <= 25*D(i,j);
+                    K(i,i)+K(j,j)-2*K(i,j) >= 16*D(i,j);
                 end
             end
         end
@@ -54,25 +59,31 @@ while ~terminate
         m(Mi(1,1)) == 1;
         m(Mi) == semidefinite(size(Mi,1));
         
-        Vm = reshape(Sh * m, p, []).';
-        sum(Vm, 2) == 0;
+%         Vm = reshape(Sh * m, p, []).';
+%         sum(Vm, 2) == 0;
+        sum(m(Vi)) == 0;
 
         [P m(Mi); m(Mi)' Q] == semidefinite(2*h);
 %         obj =  - trace(K) + lambda1 * norm_nuc(m(Mi)) +  lambda2 * norm_nuc(m(Vi));
-%             obj = - lambda2 * trace(K) ;
-        obj = - trace(K) + lambda1 * (trace(W1*P) + trace(W2*Q));
+        obj = trace(W1*P) + trace(W2*Q);
+%         obj = - trace(K) + lambda1 * (trace(W1*P) + trace(W2*Q));
         minimize(obj);
     cvx_end
     
     s = svd(m(Mi));
-    if s(1)/sum(s)>0.9999 || norm(m-m_pre)<1e-6
+    s'
+    if s(2)<1e-3*s(1) || norm(m-m_pre)<1e-6 || iter > maxIter
         terminate = true;
     end
+    iter = iter + 1;
     
     sy = svd(P);
     sz = svd(Q);
     W1 = inv(P + sy(2)*eye(h));
     W2 = inv(Q + sz(2)*eye(h));
+    scale = norm(blkdiag(W1,W2),2);
+    W1 = W1/scale;
+    W2 = W2/scale;
 end
 
 % [U,S,V] = svd(K);
@@ -83,7 +94,8 @@ end
 % Y = R(1:ind,:);
 
 x = m(2:n+1);
-Vm = reshape(Sh * m, p, []);
+% Vm = reshape(Sh * m, p, []);
+Vm = m(Vi);
 X = hankel(m(2:d+1),m(d+1:n+1));
 [Vr, powers] = veronese(X,2);
 [U,S,V] = svd(Vm);

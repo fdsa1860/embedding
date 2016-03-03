@@ -1,11 +1,10 @@
-function [x,group] = veroneseSDEcvx6(D, nn, lambda1, lambda2)
+function [x,group] = veroneseSDEcvx6(data, nn, lambda1, lambda2)
 % solve 2 systems switch system with veronese map and moment
 
+D = pdist2(data',data');
 D = D.^2;
 % d = size(X, 1);
-% n = size(X, 2);
-% G = X' * X;
-n = size(D, 1);
+n = size(data, 2);
 Eta = getNNmap(D, nn);
 EtaPair = (Eta'*Eta > 0);
 
@@ -27,7 +26,7 @@ h = size(Mi,1);
 % get indices for regressors
 rInd = [1 q+2:q+p+1];
 Ri = Mi(rInd, rInd);
-h = size(Ri,1);
+% h = size(Ri,1);
 
 % get Kernel indices
 Ki = getKernelInd(n);
@@ -41,7 +40,7 @@ W2 = eye(h);
 m = zeros(L, 1);
 m_pre = ones(L, 1);
 terminate = false;
-maxIter = 100;
+maxIter = 10;
 iter = 1;
 while ~terminate
     m_pre = m;
@@ -54,8 +53,10 @@ while ~terminate
             for j = 1:n
                 if Eta(i,j)==1 || EtaPair(i,j)==1
 %                     K(i,i)+K(j,j)-2*K(i,j) == D(i,j);
-                    K(i,i)+K(j,j)-2*K(i,j) >= D(i,j)-epsilon;
-                    K(i,i)+K(j,j)-2*K(i,j) <= D(i,j)+epsilon;
+%                     K(i,i)+K(j,j)-2*K(i,j) >= D(i,j)-epsilon;
+%                     K(i,i)+K(j,j)-2*K(i,j) <= D(i,j)+epsilon;
+                    K(i,i)+K(j,j)-2*K(i,j) <= 25*D(i,j);
+                    K(i,i)+K(j,j)-2*K(i,j) >= 16*D(i,j);
                 end
             end
         end
@@ -69,18 +70,19 @@ while ~terminate
 %         sum(Vm, 2) >= -1e-6;
 %         sum(m(q+2:q+p+1)) == 1;
         m(q+2) == 1;
-        ind = find(sum(Dict,2)==2 & sum(Dict(:,1:q)==2,2));
+%         ind = find(sum(Dict,2)==2 & sum(Dict(:,1:q)==2,2));
 %         m(ind) <= 1;
 
-        [P m(Ri); m(Ri)' Q] == semidefinite(2*h);
+        [P m(Mi); m(Mi)' Q] == semidefinite(2*h);
         
 %         obj =  - trace(K) + lambda1 * norm_nuc(m(Mi)) +  lambda2 * norm_nuc(m(Vi));
-%         obj = trace(W1*P) + trace(W2*Q) ;
-        obj = sum(m(ind)) + lambda1 * (trace(W1*P) + trace(W2*Q));
+        obj = trace(W1*P) + trace(W2*Q) ;
+%         obj = sum(m(ind)) + lambda1 * (trace(W1*P) + trace(W2*Q));
         minimize(obj);
     cvx_end
     
     s = svd(m(Mi));
+    s'
     if s(2)<1e-5*s(1) || norm(m-m_pre,inf)<1e-5 || iter > maxIter
         terminate = true;
     end

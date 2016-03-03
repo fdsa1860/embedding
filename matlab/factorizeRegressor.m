@@ -28,14 +28,16 @@ while ~terminate
 
         r1S = 1;
         r2S = 3+1;
+        m(r1S+1) == 1;
+        m(r2S+1) == 1;
         ind_r11r21 = find(sum(Dict,2)==2 & Dict(:,r1S)==1 & Dict(:,r2S)==1);
         r(1) == m(ind_r11r21);
         ind_r11r22 = find(sum(Dict,2)==2 & Dict(:,r1S)==1 & Dict(:,r2S+1)==1);
         ind_r12r21 = find(sum(Dict,2)==2 & Dict(:,r1S+1)==1 & Dict(:,r2S)==1);
         r(2) == m(ind_r11r22) + m(ind_r12r21);
         ind_r11r23 = find(sum(Dict,2)==2 & Dict(:,r1S)==1 & Dict(:,r2S+2)==1);
-        ind_r13r22 = find(sum(Dict,2)==2 & Dict(:,r1S+2)==1 & Dict(:,r2S+1)==1);
-        r(3) == m(ind_r11r23) + m(ind_r13r22);
+        ind_r13r21 = find(sum(Dict,2)==2 & Dict(:,r1S+2)==1 & Dict(:,r2S)==1);
+        r(3) == m(ind_r11r23) + m(ind_r13r21);
         ind_r12r22 = find(sum(Dict,2)==2 & Dict(:,r1S+1)==1 & Dict(:,r2S+1)==1);
         r(4) == m(ind_r12r22);
         ind_r12r23 = find(sum(Dict,2)==2 & Dict(:,r1S+1)==1 & Dict(:,r2S+2)==1);
@@ -50,6 +52,7 @@ while ~terminate
         minimize(obj);
     cvx_end
     s = svd(m(Mi));
+    s'
     if s(2)<1e-5*s(1) || norm(m-m_pre,inf)<1e-5 || iter > maxIter
         terminate = true;
     end
@@ -59,13 +62,13 @@ while ~terminate
     sz = svd(Q);
     W1 = inv(P + sy(2)*eye(h));
     W2 = inv(Q + sz(2)*eye(h));
-    %     scale = norm(blkdiag(W1,W2),2);
-    %     W1 = W1/scale;
-    %     W2 = W2/scale;
+    scale = norm(blkdiag(W1,W2),2);
+    W1 = W1/scale;
+    W2 = W2/scale;
 end
 
 svd(m(Mi))
-r1 = m(1:3);
-r2 = m(4:6);
+r1 = m(2:4);
+r2 = m(5:7);
 
 end

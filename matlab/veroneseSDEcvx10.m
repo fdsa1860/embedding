@@ -1,4 +1,4 @@
-function [x,group] = veroneseSDEcvx7(data, nn, lambda1, lambda2)
+function [x,group] = veroneseSDEcvx10(data, nn, lambda1, lambda2)
 % solve 2 systems switch system with veronese map and moment
 % with r = r1 x r2;
 
@@ -10,19 +10,21 @@ Eta = getNNmap(D, nn);
 EtaPair = (Eta'*Eta > 0);
 
 epsilon = 1e-6;
+sigma = 0.1;
 d = 3;
 
 q = n*(n+1)/2; % number of kernel variables
 p = d*(d+1)/2; % number of veronese map variables
 n1 = d;
 n2 = d;
+nr = (n-d+1)*d;
 
 % build moment matrix
 mord = 1;
 nSys = 2;
-[Dict,Indx] = momentPowers(0,q+p+n1+n2,2*mord);
+[Dict,Indx] = momentPowers(0,q+p+n1+n2+nr,2*mord);
 L = max(Indx);
-[basis,~] = momentPowers(0,q+p+n1+n2,mord);
+[basis,~] = momentPowers(0,q+p+n1+n2+nr,mord);
 Mi = getMomInd(Dict,basis,0,Indx,0);
 h = size(Mi,1);
 % get indices for regressors
@@ -35,7 +37,7 @@ Ki = getKernelInd(n);
 
 Vi = getStructuredVeroneseMap6(Dict, d, n, 2);
 
-
+KRi = getKRInd10(Dict, d, n);
 
 W1 = eye(h);
 W2 = eye(h);
@@ -49,6 +51,7 @@ while ~terminate
     cvx_begin sdp
     cvx_solver mosek
         variables m(L, 1);
+        variable R(d, n)
         variables P(h, h) Q(h, h);
         K = m(Ki);
         for i = 1:n
@@ -94,12 +97,22 @@ while ~terminate
         ind_r13r23 = find(sum(Dict,2)==2 & Dict(:,r1S+2)==1 & Dict(:,r2S+2)==1);
         r(6) == m(ind_r13r23);
         
+        r1 = m(r1S:r1S+d-1);
+        r2 = m(r2S:r2S+d-1);
+        sum(m(KRi), 2) <= epsilon;
+        sum(m(KRi), 2) >= -epsilon;
+        d1 = r1 * ones(1, n) - R;
+        pr1 = sum(abs(d1))/2/sigma^2;
+        d2 = r2 * ones(1, n) - R;
+        pr2 = sum(abs(d2))/2/sigma^2;
+        obj2 = log_sum_exp(pr1) + log_sum_exp(pr2);
+        
 %         ind = find(sum(Dict,2)==2 & sum(Dict(:,1:q)==2,2));
 
         [P m(Mi); m(Mi)' Q] == semidefinite(2*h);
         
-%         obj =  - trace(K) + lambda1 * norm_nuc(m(Mi)) +  lambda2 * norm_nuc(m(Vi));
-        obj = trace(W1*P) + trace(W2*Q);
+        obj = obj2 + lambda1 * (trace(W1*P) + trace(W2*Q));
+%         obj = trace(W1*P) + trace(W2*Q);
 %         obj = sum(m(ind)) + lambda1 * (trace(W1*P) + trace(W2*Q));
         minimize(obj);
     cvx_end

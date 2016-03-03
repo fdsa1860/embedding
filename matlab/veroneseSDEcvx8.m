@@ -56,8 +56,8 @@ while ~terminate
 
         [P Vr; Vr' Q] == semidefinite(p+n-d+1);
 %         obj =  - trace(K) + lambda1 * norm_nuc(m(Mi)) +  lambda2 * norm_nuc(m(Vi));
-%             obj = - trace(W1*P) + trace(W2*Q) ;
-        obj = - trace(K(1:n,1:n)) + trace(K(1+n:2*n,1+n:2*n)) + lambda1 * (trace(W1*P) + trace(W2*Q));
+            obj =  trace(W1*P) + trace(W2*Q) ;
+%         obj = - trace(K(1:n,1:n)) + trace(K(1+n:2*n,1+n:2*n)) + lambda1 * (trace(W1*P) + trace(W2*Q));
         minimize(obj);
     cvx_end
     
