@@ -1,16 +1,20 @@
-function [x,group] = veroneseSDEcvx5(data, k, lambda1, lambda2)
+function [x, label] = veroneseSDEcvx5(data, opt)
 % do not use moment, detect switching between two systems by minimizing
 % rank of veronese matrix
+
+lambda1 = opt.lambda1;
+nn = opt.numNeighbors;
+sysOrd = opt.sysOrd;
 
 D = pdist2(data',data');
 D2 = D.^2;
 % d = size(X, 1);
 n = size(data, 2);
-Eta = getNNmap(D, k);
+Eta = getNNmap(D, nn);
 EtaPair = (Eta'*Eta > 0);
 
 epsilon = 1e-6;
-d = 3;
+d = sysOrd + 1;
 p = d*(d+1)/2;
 
 % Sh = getStructuredVeroneseMap5(n, d, 2);
@@ -35,7 +39,7 @@ while ~terminate
 %                     K(i,i)+K(j,j)-2*K(i,j) == D2(i,j);
 %                     K(i,i)+K(j,j)-2*K(i,j) >= D2(i,j)-epsilon;
 %                     K(i,i)+K(j,j)-2*K(i,j) <= D2(i,j)+epsilon;
-                    K(i,i)+K(j,j)-2*K(i,j) <= 25*D2(i,j);
+                    K(i,i)+K(j,j)-2*K(i,j) <= 25.9*D2(i,j);
                     K(i,i)+K(j,j)-2*K(i,j) >= 16*D2(i,j);
                 end
             end
@@ -54,7 +58,7 @@ while ~terminate
 %         obj =  norm_K3 + lambda1 * (trace(W1*P) + trace(W2*Q));
 %         obj = (trace(W1*P) + trace(W2*Q)) ;
 %         obj = - trace(K) + lambda1 * (trace(W1*P) + trace(W2*Q));
-        obj = trace(WK*K) + lambda1 * (trace(W1*P) + trace(W2*Q));
+        obj = (trace(W1*P) + trace(W2*Q)) + lambda1 * trace(WK*K);
         minimize(obj);
     cvx_end
     
@@ -85,11 +89,11 @@ while ~terminate
 
 end
 
-% robust regression
-maxError = 0.1;
-[label, r1, r2] = ssrrr(K,d-1,maxError);
-Kt = reduceRankK(K, Vi, D2, Eta, EtaPair, r1, r2, 0.1,maxError);
-K = Kt;
+% % robust regression
+% maxError = 0.1;
+% [label, r1, r2] = ssrrr(K,d-1,maxError);
+% Kt = reduceRankK(K, Vi, D2, Eta, EtaPair, r1, r2, 0.1,maxError);
+% K = Kt;
 
 [U,S,V] = svd(K);
 R = S.^0.5 * V';
@@ -147,5 +151,8 @@ end
 
 %segment using spectral clustering
 group=SpectralClustering(affMat,2);
+
+% assign the first label to initial data
+label = [group(1) * ones(1, sysOrd), group.'];
 
 end

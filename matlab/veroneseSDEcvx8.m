@@ -18,6 +18,7 @@ Vi = getVeroneseMap8(n, d);
 
 W1 = eye(n-d+1);
 W2 = eye(p);
+WK = eye(n);
 K = zeros(2*n, 2*n);
 K_pre = ones(2*n, 2*n);
 maxIter = 10;
@@ -63,11 +64,8 @@ while ~terminate
     
     s = svd(Vr);
     s'
-    
-    if s(end)/sum(s) < 1e-3 || norm(K-K_pre) < 1e-5 || iter >= maxIter
-        terminate = true;
-    end
-    iter = iter + 1;
+    sk = svd(K(1:n,1:n));
+    sk'
     
     sp = svd(P);
     sq = svd(Q);
@@ -76,6 +74,15 @@ while ~terminate
     scale = norm(blkdiag(W1,W2),2);
     W1 = W1/scale;
     W2 = W2/scale;
+    
+    WK = inv(K(1:n,1:n) + sk(2)*eye(n));
+    WK = WK / norm(WK);
+    
+    if s(end)/sum(s) < 1e-3 || norm(K-K_pre) < 1e-5 || iter >= maxIter
+        terminate = true;
+    end
+    iter = iter + 1;
+
 end
 
 [U,S,V] = svd(K(1:n,1:n));

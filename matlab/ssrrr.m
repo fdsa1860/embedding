@@ -2,7 +2,7 @@ function [label, R1, R2] = ssrrr(K,ord,epsilon)
 
 % load('K');
 % K = K(1:20,1:20);
-m = size(K,1);
+m = size(K,2);
 
 if nargin == 1
     ord = 2;    % define system order
@@ -16,7 +16,7 @@ for i = 1:N
     X{i} = K(:,i:i+ord);
 end
 
-label = zeros(1,N);
+label = zeros(N,1);
 
 % run first greedy iteration
 disp('Begin to run the first greedy iteration.');
