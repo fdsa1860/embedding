@@ -8,31 +8,31 @@ addpath(genpath('../matlab'));
 dbstop if error
 
 opt.nSys = 2; % number of systems
-% sys_ord = [2 2 3 3 4 4]; % order for each system, minimum 2
-opt.sysOrders = [2 2]; % order for each system, minimum 2
-opt.numSample = 20; % number of data samples
-opt.switchInd = [5 12 18];
-opt.numDim = 3;
-opt.epsilon = 0.02;
 opt.lambda1Init = 0.0001;
 opt.lambda1Rate = 10;
-opt.method = 'moment';
-% opt.method = 'convex';
+opt.epsilon = 0.0;
+% opt.method = 'moment';
+opt.method = 'convex';
 % opt.method = 'convex_noisy';
 opt.dataset = 'synthetic';
 % opt.dataset = 'mhad';
-opt.numNeighbors = opt.numSample;
-opt.sysOrd = max(opt.sysOrders);
+% opt.dataset = 'msr';
 
 if strcmp(opt.dataset, 'synthetic')
+    opt.sysOrders = [2 2]; % order for each system, minimum 2
+    opt.numSample = 10; % number of data samples
+    opt.switchInd = [5 12 18];
+    opt.numDim = 1;
     opt.c1 = 4;
     opt.c2 = 5.09;
-    % rng('default');
-    rng(1);
+    opt.numNeighbors = opt.numSample;
+    opt.sysOrd = max(opt.sysOrders);
+%     rng('default');
+    rng(12);
     [data_clean,r, gt] = switchSysDataGen(opt);
-    data_clean = bsxfun(@minus,data_clean, mean(data_clean,2));
-    data_clean = bsxfun(@rdivide,data_clean, max(abs(data_clean),[],2));
-    data_linear = data_clean + 0.0 * rand(size(data_clean));
+%     data_clean = bsxfun(@minus,data_clean, mean(data_clean,2));
+    data_clean_normal = bsxfun(@rdivide,data_clean, max(abs(data_clean),[],2));
+    data_linear = data_clean_normal + 0.0 * rand(size(data_clean));
     % data = exp(data_clean)-1 + 0.0 * randn(size(data_clean));
     data = 1./(1+exp(-data_linear)) + opt.epsilon * rand(size(data_clean));
     % data = sqrt(data_clean.^2+5) + 0.0 * randn(size(data_clean));
@@ -44,12 +44,37 @@ elseif strcmp(opt.dataset, 'mhad')
     data = bsxfun(@minus,data, mean(data,2));
     data = bsxfun(@rdivide,data, max(abs(data),[],2));
     gt = ones(1, opt.numSample);
+elseif strcmp(opt.dataset, 'msr')
+    opt.sysOrders = [3 3];
+    opt.sysOrd = max(opt.sysOrders);
+    opt.c1 = 0.9;
+    opt.c2 = 1.1;
+    jointInd = 13;
+    load ../expData/msr.mat;
+    jointTraj = msr(3*jointInd-2:3*jointInd,:);
+    y = jointTraj(2,:);
+    y1 = y(1:16);
+    [y1h,eta,v,R] = fast_incremental_hstln_mo(y1, 0.01);
+    y2 = y(16:30);
+    [y2h,eta,v,R] = fast_incremental_hstln_mo(y2, 0.05);
+    y3 = y(30:end);
+    [y3h,eta,v,R] = fast_incremental_hstln_mo(y3, 0.1);
+    yn = [y2h(7:end) y3h(2:end)];
+%     yn = [y1h y2h(2:end) y3h(2:end)];
+    gt = [ones(1,10), 2*ones(1,22)];
+%     data = msr(3,1:opt.numSample);
+    data = yn;
+%     data = bsxfun(@minus,data, mean(data,2));
+%     data = bsxfun(@rdivide,data, max(abs(data),[],2));
+%     gt = ones(1, opt.numSample);
 end
+
+opt.numNeighbors = size(data, 2);
 
 tic;
 if strcmp(opt.method, 'moment')
-%     opt.lambda1 = 1000;
-    opt.maxIter = 100;
+    opt.lambda1 = 1e-3;
+    opt.maxIter = 1000;
     [x,label,rHat,rdHat] = veroneseSDEcvx11(data, opt);
 elseif strcmp(opt.method, 'convex')
     opt.lambda1 = 10;

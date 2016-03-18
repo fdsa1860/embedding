@@ -36,6 +36,7 @@ if nargin < 3
 end
 m = zeros(L, 1);
 m_pre = ones(L, 1);
+sigma = inf;
 terminate = false;
 iter = 1;    
 while ~terminate
@@ -93,13 +94,15 @@ while ~terminate
     
     % reweight moment matrix
     sm = svd(m(Qi));
-    W1 = inv(m(Qi) + sm(2)*eye(h));
+    sigma = min([sigma, sm(2)]);
+    W1 = inv(m(Qi) + sigma * eye(h));
     W1 = W1 / norm(W1,'fro');
     % reweight indicator variables to make it sparse
     Ws = 1 ./ (m(Si) + 1e-5);
     Ws = Ws./repmat(sum(Ws),2,1);
     
     iter
+    lambda1
     
     S = m(Si);
     S
@@ -109,12 +112,12 @@ while ~terminate
     
     norm(m-m_pre)/L
     
-    rankCondition = (s(2)<1e-5*s(1));
+    rankCondition = (s(2) < 1e-4*s(1));
     sparseCondition = S(1,:)*S(2,:).'<1e-3;
     if lambda1 == 0
-        terminate = (rankCondition || norm(m-m_pre)/L<1e-6 || iter > maxIter);
+        terminate = (rankCondition || norm(m-m_pre)/L<1e-6 || iter >= maxIter);
     else
-        terminate = ( (rankCondition && sparseCondition) || norm(m-m_pre)<1e-3 || iter >= maxIter );
+        terminate = ( (rankCondition && sparseCondition) || norm(m-m_pre)/L<1e-5 || iter >= maxIter );
     end
     m_pre = m;
     iter = iter + 1;

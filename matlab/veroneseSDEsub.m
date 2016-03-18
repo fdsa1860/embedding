@@ -15,6 +15,8 @@ maxIter = opt.maxIter;
 c1 = opt.c1;
 c2 = opt.c2;
 
+eps = 1e-6;
+
 if nargin < 2
     W1 = eye(n-d+1);
     W2 = eye(p);
@@ -23,6 +25,7 @@ end
 K = zeros(n, n);
 K_pre = zeros(n,n);
 iter = 1;
+sigma = inf;
 terminate = false;
 while ~terminate
     cvx_begin quiet
@@ -33,6 +36,7 @@ while ~terminate
         for j = 1:n
             if Eta(i,j)==1 || EtaPair(i,j)==1
                 if epsilon==0
+%                     K(i,i)+K(j,j)-2*K(i,j) == c1^2*D2(i,j);
                     K(i,i)+K(j,j)-2*K(i,j) >= c1^2*D2(i,j);
                     K(i,i)+K(j,j)-2*K(i,j) <= c2^2*D2(i,j);
                 else
@@ -53,17 +57,19 @@ while ~terminate
     minimize(obj);
     cvx_end
     
+    lambda1
     iter
     s = svd(Vr);
     s'
+    fprintf('s(end)/sum(s) = %f\n',s(end)/sum(s));
     sk = svd(K);
     sk'
-    norm(K-K_pre)/n^2
+    fprintf('norm(K-K_pre)/n^2 = %f\n',norm(K-K_pre)/n^2);
     
-    sp = svd(P);
-    sq = svd(Q);
-    W1 = inv(P + sp(5)*eye(n-d+1));
-    W2 = inv(Q + sq(5)*eye(p));
+    sigma = min([sigma, s(p)]);
+    sigma = max([sigma, eps]);
+    W1 = inv(P + sigma * eye(n-d+1));
+    W2 = inv(Q + sigma * eye(p));
     scale = norm(blkdiag(W1,W2),2);
     W1 = W1/scale;
     W2 = W2/scale;
@@ -71,7 +77,7 @@ while ~terminate
     WK = inv(K + sk(2)*eye(n));
     WK = WK / norm(WK);
     
-    VeroneseCondition = (s(end)/sum(s) < 1e-3);
+    VeroneseCondition = (s(end)/sum(s) < 1e-4);
     if VeroneseCondition || norm(K-K_pre)/n^2 < 1e-5 || iter >= maxIter
         terminate = true;
     end

@@ -34,9 +34,15 @@ while ~terminate2
     [K, VeroneseCondition] = veroneseSDEsub(opt,W1,W2,WK);
 %     [K, VeroneseCondition] = veroneseSDEsub(opt);
     if VeroneseCondition && opt.lambda1 <= 1e6
-        currK = K;
-        currLambda1 = opt.lambda1;
-        opt.lambda1 = opt.lambda1 * opt.lambda1Rate;
+        s = svd(K);
+        s(2)/s(1)
+        if s(2)/s(1) < 1e-5 % K is rank 1
+            terminate2 = true;
+        else
+            currK = K;
+            currLambda1 = opt.lambda1;
+            opt.lambda1 = opt.lambda1 * opt.lambda1Rate;
+        end
     else
         terminate2 = true;
         if ~isempty(currK)
@@ -46,13 +52,13 @@ while ~terminate2
     end
 end
 
-% [x, group, rHat] = gpcaClustering(K, opt);
-[group, r1, r2] = ssrrr(K, sysOrd, 0.1);
-rHat = [r1 r2];
-x = [];
+[x, group, rHat] = gpcaClustering(K, opt);
+
 % % robust regression
-% maxError = 0.1;
-% [label, r1, r2] = ssrrr(K,d-1,maxError);
+% maxError = 0.005;
+% [group, r1, r2] = ssrrr(K, sysOrd, maxError);
+% rHat = [r1 r2];
+% x = [];
 
 % % my SSC
 % Y = hankel(K(1,1:3), K(1,3:end));

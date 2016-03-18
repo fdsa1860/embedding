@@ -62,54 +62,67 @@ opt.Pi = getPSDInd11(Mi, d, n, var);
 opt.Si = reshape(opt.SSi(:,2), nSys, n-d+1);
 % SAi = getSAInd11(Mi, Si);
 
+[m, rankCondition, sparseCondition, W1] = momentCVXsub(opt, var);
+if ~rankCondition
+    warning('Moment matrix is not rank 1.\n');
+end
+
 % % warm start
 % opt.lambda1 = 0;
 % [m, rankCondition, sparseCondition, W1] = momentCVXsub(opt, var);
 % if ~rankCondition
-%     error('Moment matrix is not rank 1.\n');
+%     warning('Moment matrix is not rank 1.\n');
 % end
-Ws = ones(size(opt.Si));
-W1 = eye(opt.h);
-
-% opt.maxIter = 100;
-opt.lambda1 = opt.lambda1Init;
-terminate2 = false;
-while ~terminate2
-    Ws = ones(size(opt.Si));
-    [m, rankCondition,sparseCondition,W1,Ws] = momentCVXsub(opt,var,W1,Ws);
+% Ws = ones(size(opt.Si));
+% % W1 = eye(opt.h);
+% 
+% % opt.maxIter = 100;
+% opt.lambda1 = opt.lambda1Init;
+% terminate2 = rankCondition && sparseCondition;
+% while ~terminate2
+% %     Ws = ones(size(opt.Si));
+% %     [m, rankCondition,sparseCondition,W1,Ws] = momentCVXsub(opt,var,W1,Ws);
 %     [m, rankCondition, sparseCondition] = momentCVXsub(opt, var, W1, Ws);
-%     [K, rankCondition] = momentCVXsub(opt, var);
-    if rankCondition && sparseCondition 
-        terminate2 = true;
-    elseif ~sparseCondition && opt.lambda1 <= 1e6
-        opt.lambda1 = opt.lambda1 * opt.lambda1Rate;
-    elseif ~rankCondition && opt.lambda1 >= 1e-6
-        opt.lambda1 = opt.lambda1 / opt.lambda1Rate;
-    end
-end
+% %     [K, rankCondition] = momentCVXsub(opt, var);
+%     if rankCondition && sparseCondition 
+%         terminate2 = true;
+%     elseif opt.lambda1 > 1e6 || opt.lambda1 < 1e-6
+%         terminate2 = true;
+%         fprintf('fail to converge.\n')
+%     elseif ~rankCondition && opt.lambda1 >= 1e-6
+%         opt.lambda1 = opt.lambda1 / opt.lambda1Rate;
+%     elseif ~sparseCondition && opt.lambda1 <= 1e6
+%         opt.lambda1 = opt.lambda1 * opt.lambda1Rate / 2;
+%     end
+% end
 
-save ../expData/moment_n20_e02_m.mat m;
+save ../expData/moment_n10_cleanWithoutWarmStart_m.mat m opt;
+
+% K = m(opt.Ki);
+% [U,S,V] = svd(K);
+% R = S.^0.5 * V';
+% s = diag(S);
+% c = cumsum(s)/sum(s);
+% ind = nnz(c<0.99)+1;
+% x = R(1:ind,:);
+% 
+% [~,group] = max(m(opt.Si));
+% 
+% Ri = reshape(var.rInd, var.rDim, []);
+% Ri = Ri + 1;
+% rHat = m(Ri);
+% 
+% Rdi = reshape(var.rdInd, var.rDim, var.nSys);
+% Rdi = Rdi + 1;
+% rdHat = m(Rdi);
 
 K = m(opt.Ki);
-[U,S,V] = svd(K);
-R = S.^0.5 * V';
-s = diag(S);
-c = cumsum(s)/sum(s);
-ind = nnz(c<0.99)+1;
-x = R(1:ind,:);
-
-[~,group] = max(m(opt.Si));
-
-Ri = reshape(var.rInd, var.rDim, []);
-Ri = Ri + 1;
-rHat = m(Ri);
-
-Rdi = reshape(var.rdInd, var.rDim, var.nSys);
-Rdi = Rdi + 1;
-rdHat = m(Rdi);
+opt.Vi = getVeroneseMap5(opt.n, opt.d);
+[x, group, rHat] = gpcaClustering(K, opt);
+rdHat = [];
 
 % assign the first label to initial data
-label = [group(1) * ones(1, sysOrd), group];
+label = [group(1) * ones(1, sysOrd), group.'];
 if label(1)~=1
     label = mod(label, opt.nSys) + 1;
 end
