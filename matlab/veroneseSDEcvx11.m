@@ -45,8 +45,8 @@ Mi = getMomInd(Dict,basis,0,Indx,0);
 opt.Mi = Mi;
 % get indices for regressors
 qInd = [1, 1+var.kInd, 1+var.rdInd];
-opt.Qi = Mi(qInd, qInd);
-% Qi = Mi;
+% opt.Qi = Mi(qInd, qInd);
+opt.Qi = Mi;
 opt.h = size(opt.Qi, 1);
 % get Kernel indices
 opt.Ki = getKernelInd(n);
@@ -98,28 +98,28 @@ end
 
 save ../expData/moment_n10_cleanWithoutWarmStart_m.mat m opt;
 
-% K = m(opt.Ki);
-% [U,S,V] = svd(K);
-% R = S.^0.5 * V';
-% s = diag(S);
-% c = cumsum(s)/sum(s);
-% ind = nnz(c<0.99)+1;
-% x = R(1:ind,:);
-% 
-% [~,group] = max(m(opt.Si));
-% 
-% Ri = reshape(var.rInd, var.rDim, []);
-% Ri = Ri + 1;
-% rHat = m(Ri);
-% 
-% Rdi = reshape(var.rdInd, var.rDim, var.nSys);
-% Rdi = Rdi + 1;
-% rdHat = m(Rdi);
-
 K = m(opt.Ki);
-opt.Vi = getVeroneseMap5(opt.n, opt.d);
-[x, group, rHat] = gpcaClustering(K, opt);
-rdHat = [];
+[U,S,V] = svd(K);
+R = S.^0.5 * V';
+s = diag(S);
+c = cumsum(s)/sum(s);
+ind = nnz(c<0.99)+1;
+x = R(1:ind,:);
+
+[~,group] = max(m(opt.Si));
+
+Ri = reshape(var.rInd, var.rDim, []);
+Ri = Ri + 1;
+rHat = m(Ri);
+
+Rdi = reshape(var.rdInd, var.rDim, var.nSys);
+Rdi = Rdi + 1;
+rdHat = m(Rdi);
+
+% K = m(opt.Ki);
+% opt.Vi = getVeroneseMap5(opt.n, opt.d);
+% [x, group, rHat] = gpcaClustering(K, opt);
+% rdHat = [];
 
 % assign the first label to initial data
 label = [group(1) * ones(1, sysOrd), group.'];

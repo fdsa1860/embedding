@@ -11,8 +11,8 @@ opt.nSys = 2; % number of systems
 opt.lambda1Init = 0.0001;
 opt.lambda1Rate = 10;
 opt.epsilon = 0.0;
-% opt.method = 'moment';
-opt.method = 'convex';
+opt.method = 'moment';
+% opt.method = 'convex';
 % opt.method = 'convex_noisy';
 opt.dataset = 'synthetic';
 % opt.dataset = 'mhad';
@@ -49,24 +49,7 @@ elseif strcmp(opt.dataset, 'msr')
     opt.sysOrd = max(opt.sysOrders);
     opt.c1 = 0.9;
     opt.c2 = 1.1;
-    jointInd = 13;
-    load ../expData/msr.mat;
-    jointTraj = msr(3*jointInd-2:3*jointInd,:);
-    y = jointTraj(2,:);
-    y1 = y(1:16);
-    [y1h,eta,v,R] = fast_incremental_hstln_mo(y1, 0.01);
-    y2 = y(16:30);
-    [y2h,eta,v,R] = fast_incremental_hstln_mo(y2, 0.05);
-    y3 = y(30:end);
-    [y3h,eta,v,R] = fast_incremental_hstln_mo(y3, 0.1);
-    yn = [y2h(7:end) y3h(2:end)];
-%     yn = [y1h y2h(2:end) y3h(2:end)];
-    gt = [ones(1,10), 2*ones(1,22)];
-%     data = msr(3,1:opt.numSample);
-    data = yn;
-%     data = bsxfun(@minus,data, mean(data,2));
-%     data = bsxfun(@rdivide,data, max(abs(data),[],2));
-%     gt = ones(1, opt.numSample);
+    [data,gt] = getMSRdata;
 end
 
 opt.numNeighbors = size(data, 2);

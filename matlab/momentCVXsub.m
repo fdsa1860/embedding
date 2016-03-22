@@ -71,7 +71,11 @@ while ~terminate
         
         m(RRi) * [-1; 1; 1] <= eps;
         m(RRi) * [-1; 1; 1] >= -eps;
-        m(1+var.rBase+1) >= m(1+var.rBase+1+var.rDim);
+        m(1+var.rdBase+1) >= m(1+var.rdBase+1+var.rDim);
+        m(1+var.rdBase+1) == 0.7044;
+        m(1+var.rdBase+3) == 0.7044;
+        m(1+var.rdBase+1+var.rDim) == 0.5519;
+        m(1+var.rdBase+3+var.rDim) == 0.5519;
         sum(m(R2i), 2) == 1;
         m(R1i) >= eps;
         
@@ -86,15 +90,16 @@ while ~terminate
         
         objMomentRank = trace(W1*m(Qi));
         objSparseS = sum(sum(Ws.*m(Si)));
-        obj = objMomentRank + lambda1 * objSparseS;
-%         obj = objMomentRank;
+%         obj = objMomentRank + lambda1 * objSparseS;
+        obj = objMomentRank;
 %         obj = sum(m(K2i)) + lambda1 * (trace(W1*P) + trace(W2*Q));
         minimize(obj);
     cvx_end
     
     % reweight moment matrix
     sm = svd(m(Qi));
-    sigma = min([sigma, sm(2)]);
+%     sigma = min([sigma, sm(2)]);
+    sigma = sm(2);
     W1 = inv(m(Qi) + sigma * eye(h));
     W1 = W1 / norm(W1,'fro');
     % reweight indicator variables to make it sparse
@@ -117,7 +122,7 @@ while ~terminate
     if lambda1 == 0
         terminate = (rankCondition || norm(m-m_pre)/L<1e-6 || iter >= maxIter);
     else
-        terminate = ( (rankCondition && sparseCondition) || norm(m-m_pre)/L<1e-5 || iter >= maxIter );
+        terminate = ( (rankCondition && sparseCondition) || norm(m-m_pre)/L<1e-7 || iter >= maxIter );
     end
     m_pre = m;
     iter = iter + 1;
